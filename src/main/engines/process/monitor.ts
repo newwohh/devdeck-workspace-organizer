@@ -36,6 +36,12 @@ export class ProcessMonitor {
     return this.latest
   }
 
+  /** Whether `pid` is one of the dev servers DevDeck currently tracks. Used to
+   * ensure the app can never signal an untracked (e.g. system) process. */
+  knows(pid: number): boolean {
+    return this.latest.some((p) => p.pid === pid)
+  }
+
   async refresh(): Promise<ProcessInfo[]> {
     const lsofOut = await run('lsof', ['-nP', '-iTCP', '-sTCP:LISTEN', '-F', 'pn'])
     if (lsofOut === null) {

@@ -25,10 +25,17 @@ export function registerRuntimeHandlers(getWindow: () => BrowserWindow | null): 
   })
 
   handle('process.kill', (input) => {
+    // Safety guard: DevDeck will only ever signal a process it has itself
+    // detected as a local dev server (listening on a TCP port). It is therefore
+    // impossible to target system daemons or unrelated processes from the UI.
+    // It also only sends SIGTERM (graceful), never SIGKILL.
+    if (!monitor.knows(input.pid)) {
+      throw new Error(`Refusing to kill pid ${input.pid}: not a DevDeck-tracked dev server`)
+    }
     try {
       process.kill(input.pid, 'SIGTERM')
     } catch {
-      /* already gone */
+      /* already gone or not permitted (e.g. not owned by this user) */
     }
     void monitor.refresh()
     return { ok: true as const }
