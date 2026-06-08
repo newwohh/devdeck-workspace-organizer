@@ -1,11 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, StatusDot } from '../../components/ui'
 import { ipc } from '../../lib/ipc'
 import { homePath, relativeTime, typeIcon } from '../../lib/format'
 import { useUIStore } from '../../store/ui'
 import { useProject } from '../dashboard/useProjects'
+import { RunPanel } from './RunPanel'
 
 export function DetailDrawer() {
+  const qc = useQueryClient()
   const { selectedId, select } = useUIStore()
   const { data: project, isLoading } = useProject(selectedId)
   const git = useQuery({
@@ -107,14 +109,7 @@ export function DetailDrawer() {
 
           {project.scripts.length > 0 && (
             <Section title="Scripts">
-              <ul className="space-y-1">
-                {project.scripts.map((s) => (
-                  <li key={s.name} className="flex items-center justify-between rounded-md bg-elevated px-2 py-1 text-xs">
-                    <span className="font-medium">{s.name}</span>
-                    <span className="truncate pl-2 font-mono text-zinc-500">{s.command}</span>
-                  </li>
-                ))}
-              </ul>
+              <RunPanel projectId={project.id} scripts={project.scripts} />
             </Section>
           )}
 
@@ -130,6 +125,24 @@ export function DetailDrawer() {
               </ul>
             </Section>
           )}
+
+          <Section title="Danger zone">
+            <button
+              onClick={async () => {
+                const ok = window.confirm(
+                  `Remove "${project.name}" from DevDeck?\n\nThis deletes it from the dashboard and database (the folder on disk is NOT touched). It won't reappear on re-scan.`,
+                )
+                if (!ok) return
+                await ipc.invoke('projects.remove', { id: project.id })
+                select(null)
+                qc.invalidateQueries({ queryKey: ['projects'] })
+                qc.invalidateQueries({ queryKey: ['roots'] })
+              }}
+              className="w-full rounded-md border border-danger/40 px-2 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/10"
+            >
+              Remove from DevDeck
+            </button>
+          </Section>
         </div>
       )}
     </aside>

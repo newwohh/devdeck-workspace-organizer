@@ -123,4 +123,14 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    version: 4,
+    name: 'ignored_paths',
+    sql: /* sql */ `
+      CREATE TABLE ignored_path (
+        path       TEXT PRIMARY KEY,
+        ignored_at INTEGER NOT NULL
+      );
+    `,
+  },
 ]

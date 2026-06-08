@@ -51,7 +51,7 @@ const lite = (p: Partial<GitStatusLite>): GitStatusLite => ({
   ...p,
 })
 
-const sampleProjects: ProjectSummary[] = [
+let sampleProjects: ProjectSummary[] = [
   mk({ id: 'p1', name: 'acme-storefront', type: 'app', frameworks: ['Next.js', 'React'], category: 'Client', favorite: true, fsModifiedAt: Date.now() - 3_600_000, git: lite({ branch: 'feat/checkout', dirty: true, ahead: 2, health: 'dirty' }) }),
   mk({ id: 'p2', name: 'acme-api', type: 'service', frameworks: ['NestJS'], category: 'Client', fsModifiedAt: Date.now() - 7_200_000, git: lite({ branch: 'main', behind: 3, health: 'behind' }) }),
   mk({ id: 'p3', name: 'shopify-loyalty-app', type: 'app', frameworks: ['Shopify App', 'Remix'], category: 'Work', fsModifiedAt: Date.now() - 172_800_000, git: lite({ branch: 'develop', conflicted: true, dirty: true, health: 'conflicted' }) }),
@@ -59,6 +59,48 @@ const sampleProjects: ProjectSummary[] = [
   mk({ id: 'p5', name: 'design-system', type: 'library', frameworks: [], category: 'Open Source', fsModifiedAt: Date.now() - 1_209_600_000, git: lite({ branch: 'main', dirty: true, health: 'dirty' }) }),
   mk({ id: 'p6', name: 'rust-cli-tool', type: 'cli', primaryLanguage: 'rust', packageManager: 'cargo', frameworks: [], category: 'Personal', fsModifiedAt: Date.now() - 432_000_000, git: lite({ branch: 'main', health: 'clean' }) }),
 ]
+
+interface MockSession {
+  id: string
+  projectId: string
+  name: string
+  buffer: string
+  running: boolean
+  timers: ReturnType<typeof setTimeout>[]
+}
+const mockSessions = new Map<string, MockSession>()
+let mockSeq = 0
+
+function startMockRun(input: { projectId: string; scriptName: string }): { sessionId: string } {
+  const id = `sess_mock_${++mockSeq}`
+  const session: MockSession = { id, projectId: input.projectId, name: input.scriptName, buffer: '', running: true, timers: [] }
+  mockSessions.set(id, session)
+
+  const push = (data: string) => {
+    session.buffer += data
+    emit('events.terminal.data', { sessionId: id, data, stream: 'stdout' })
+  }
+  const lines = [
+    `$ pnpm run ${input.scriptName}\n`,
+    '> building...\n',
+    'VITE v5.4.0  ready in 312 ms\n',
+    '➜  Local:   http://localhost:3000/\n',
+    '✓ compiled successfully\n',
+  ]
+  lines.forEach((l, i) => {
+    session.timers.push(setTimeout(() => session.running && push(l), 250 * (i + 1)))
+  })
+  return { sessionId: id }
+}
+
+function stopMockRun(sessionId: string): void {
+  const s = mockSessions.get(sessionId)
+  if (!s) return
+  s.timers.forEach(clearTimeout)
+  s.running = false
+  s.buffer += '\n[stopped]\n'
+  emit('events.terminal.exit', { sessionId, code: 0 })
+}
 
 function toFullGit(p: ProjectSummary): GitStatus {
   const g = p.git!
@@ -143,6 +185,30 @@ export const browserMockBridge: DevDeckBridge = {
           .map((p) => ({ projectId: p.id, name: p.name, path: p.path, git: toFullGit(p) }))
       case 'git.refresh':
         return { jobId: 'gitjob_demo' }
+      case 'process.list':
+        return [
+          { pid: 4123, name: 'Next.js', command: 'node next dev', cpu: 2.4, memoryBytes: 320 * 1024 * 1024, port: 3000, url: 'http://localhost:3000', projectId: 'p1', projectName: 'acme-storefront' },
+          { pid: 4290, name: 'Vite', command: 'node vite', cpu: 1.1, memoryBytes: 180 * 1024 * 1024, port: 5173, url: 'http://localhost:5173', projectId: 'p5', projectName: 'design-system' },
+          { pid: 4455, name: 'Go', command: 'analytics-worker serve', cpu: 0.3, memoryBytes: 42 * 1024 * 1024, port: 8080, url: 'http://localhost:8080', projectId: 'p4', projectName: 'analytics-worker' },
+        ]
+      case 'process.kill':
+      case 'urls.open':
+        return { ok: true }
+      case 'scripts.run':
+        return startMockRun(input as { projectId: string; scriptName: string })
+      case 'scripts.stop':
+        stopMockRun((input as { sessionId: string }).sessionId)
+        return { ok: true }
+      case 'scripts.sessions':
+        return [...mockSessions.values()].map((s) => ({ sessionId: s.id, projectId: s.projectId, scriptName: s.name, running: s.running, exitCode: s.running ? null : 0 }))
+      case 'scripts.output':
+        return { data: mockSessions.get((input as { sessionId: string }).sessionId)?.buffer ?? '' }
+      case 'projects.remove': {
+        const id = (input as { id: string }).id
+        sampleProjects = sampleProjects.filter((p) => p.id !== id)
+        emit('events.projects.changed', {})
+        return { ok: true }
+      }
       default:
         throw new Error(`browserMockBridge: unhandled channel "${channel}"`)
     }

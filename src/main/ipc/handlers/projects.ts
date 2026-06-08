@@ -73,6 +73,12 @@ export function registerProjectHandlers(getWindow: () => BrowserWindow | null): 
   handle('projects.toggleFavorite', (input) => projectRepo.toggleFavorite(input.id))
   handle('projects.setCategory', (input) => projectRepo.setCategory(input.id, input.category))
 
+  handle('projects.remove', (input) => {
+    projectRepo.remove(input.id)
+    events.changed(undefined as unknown as string)
+    return { ok: true as const }
+  })
+
   handle('projects.open', async (input) => {
     const path = projectRepo.pathFor(input.id)
     if (!path) throw new Error('Project not found')

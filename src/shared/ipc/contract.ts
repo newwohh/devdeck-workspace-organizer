@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { gitRepoRowSchema, gitStatusSchema } from '../schemas/git'
+import { processInfoSchema, runSessionSchema, terminalChunkSchema } from '../schemas/runtime'
 import {
   projectDetailSchema,
   projectFilterSchema,
@@ -113,6 +114,23 @@ export const contract = {
     z.object({ id: z.string(), target: z.enum(['editor', 'terminal', 'finder']) }),
     z.object({ ok: z.literal(true) }),
   ),
+  /** Removes a project from the DB and ignores its path so re-scans skip it. */
+  'projects.remove': invoke('mutate:medium', z.object({ id: z.string() }), z.object({ ok: z.literal(true) })),
+
+  // ─── Processes / ports ──────────────────────────────────────────────────────
+  'process.list': invoke('read', z.void(), z.array(processInfoSchema)),
+  'process.kill': invoke('mutate:medium', z.object({ pid: z.number().int() }), z.object({ ok: z.literal(true) })),
+  'urls.open': invoke('mutate:low', z.object({ url: z.string() }), z.object({ ok: z.literal(true) })),
+
+  // ─── Script runner ──────────────────────────────────────────────────────────
+  'scripts.run': invoke(
+    'mutate:medium',
+    z.object({ projectId: z.string(), scriptName: z.string() }),
+    z.object({ sessionId: z.string() }),
+  ),
+  'scripts.stop': invoke('mutate:low', z.object({ sessionId: z.string() }), z.object({ ok: z.literal(true) })),
+  'scripts.sessions': invoke('read', z.void(), z.array(runSessionSchema)),
+  'scripts.output': invoke('read', z.object({ sessionId: z.string() }), z.object({ data: z.string() })),
 
   // ─── Git (read) ───────────────────────────────────────────────────────────────
   'git.available': invoke('read', z.void(), z.object({ ok: z.boolean() })),
@@ -138,6 +156,9 @@ export const contract = {
   ),
   'events.projects.changed': event(z.object({ rootId: z.string().optional() })),
   'events.git.changed': event(z.object({})),
+  'events.process.changed': event(z.object({})),
+  'events.terminal.data': event(terminalChunkSchema),
+  'events.terminal.exit': event(z.object({ sessionId: z.string(), code: z.number().nullable() })),
 } as const satisfies Record<string, AnyChannelDef>
 
 export type Contract = typeof contract

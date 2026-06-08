@@ -24,12 +24,16 @@ export async function rescanRoot(root: ScanRoot, events: IndexEvents): Promise<n
   const jobId = newId('job')
   let scanned = 0
 
-  const candidates = await walkForProjects(root.path, root.maxDepth, (dir) => {
+  const allCandidates = await walkForProjects(root.path, root.maxDepth, (dir) => {
     scanned++
     if (scanned % 20 === 0) {
       events.progress({ jobId, rootId: root.id, scanned, found: 0, done: false, currentPath: dir })
     }
   })
+
+  // Skip paths the user explicitly removed.
+  const ignored = projectRepo.ignoredPaths()
+  const candidates = allCandidates.filter((c) => !ignored.has(c.path))
 
   const keepPaths: string[] = []
   let found = 0

@@ -6,8 +6,8 @@ import { cn } from '../../lib/cn'
 const NAV: { id: AppView | string; label: string; icon: string; soon?: boolean }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '◳' },
   { id: 'git', label: 'Git', icon: '⎇' },
+  { id: 'processes', label: 'Processes', icon: '◉' },
   { id: 'docker', label: 'Docker', icon: '🐳', soon: true },
-  { id: 'processes', label: 'Processes', icon: '◉', soon: true },
 ]
 
 export function Sidebar() {

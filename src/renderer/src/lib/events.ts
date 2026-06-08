@@ -25,6 +25,10 @@ export function wireLiveEvents(qc: QueryClient): () => void {
       qc.invalidateQueries({ queryKey: ['projects'] })
       qc.invalidateQueries({ queryKey: ['git'] })
     }),
+
+    ipc.on('events.process.changed', () => {
+      qc.invalidateQueries({ queryKey: ['processes'] })
+    }),
   ]
   return () => disposers.forEach((d) => d())
 }

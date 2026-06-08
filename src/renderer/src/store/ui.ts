@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { ProjectFilter, ProjectType } from '@shared/schemas/project'
 
 export type ViewMode = 'grid' | 'list'
-export type AppView = 'dashboard' | 'git'
+export type AppView = 'dashboard' | 'git' | 'processes'
 
 interface ScanState {
   active: boolean

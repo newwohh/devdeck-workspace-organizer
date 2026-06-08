@@ -269,4 +269,25 @@ export const projectRepo = {
       | undefined
     return row?.path
   },
+
+  /** Deletes a project and remembers its path so re-scans don't re-add it. */
+  remove(id: string): void {
+    const db = getDb()
+    const path = this.pathFor(id)
+    const tx = db.transaction(() => {
+      db.prepare('DELETE FROM project WHERE id = ?').run(id)
+      if (path) {
+        db.prepare(
+          'INSERT OR IGNORE INTO ignored_path (path, ignored_at) VALUES (?, ?)',
+        ).run(path, Date.now())
+      }
+    })
+    tx()
+  },
+
+  /** Paths the user has explicitly removed — the indexer skips these. */
+  ignoredPaths(): Set<string> {
+    const rows = getDb().prepare('SELECT path FROM ignored_path').all() as { path: string }[]
+    return new Set(rows.map((r) => r.path))
+  },
 }
