@@ -97,4 +97,30 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    version: 3,
+    name: 'git_status',
+    sql: /* sql */ `
+      CREATE TABLE git_status (
+        project_id        TEXT PRIMARY KEY REFERENCES project(id) ON DELETE CASCADE,
+        is_repo           INTEGER NOT NULL,
+        branch            TEXT,
+        upstream          TEXT,
+        ahead             INTEGER NOT NULL DEFAULT 0,
+        behind            INTEGER NOT NULL DEFAULT 0,
+        staged            INTEGER NOT NULL DEFAULT 0,
+        modified          INTEGER NOT NULL DEFAULT 0,
+        untracked         INTEGER NOT NULL DEFAULT 0,
+        conflicted        INTEGER NOT NULL DEFAULT 0,
+        dirty             INTEGER NOT NULL DEFAULT 0,
+        remote_url        TEXT,
+        last_commit_hash  TEXT,
+        last_commit_msg   TEXT,
+        last_commit_author TEXT,
+        last_commit_at    INTEGER,
+        health            TEXT NOT NULL DEFAULT 'unknown',
+        captured_at       INTEGER NOT NULL
+      );
+    `,
+  },
 ]

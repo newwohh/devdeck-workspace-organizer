@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { gitStatusLiteSchema } from './git'
 
 export const projectTypeSchema = z.enum([
   'app',
@@ -75,6 +76,7 @@ export const projectSummarySchema = z.object({
   description: z.string().optional(),
   fsModifiedAt: z.number().optional(),
   lastOpenedAt: z.number().optional(),
+  git: gitStatusLiteSchema.optional(),
 })
 export type ProjectSummary = z.infer<typeof projectSummarySchema>
 

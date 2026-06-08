@@ -1,5 +1,6 @@
 import type { ProjectSummary } from '@shared/schemas/project'
 import { Badge, StatusDot } from '../../components/ui'
+import { GitChip } from '../../components/GitChip'
 import { cn } from '../../lib/cn'
 import { homePath, langColor, relativeTime, typeIcon } from '../../lib/format'
 
@@ -63,7 +64,7 @@ export function ProjectCard({
           />
           {project.primaryLanguage ?? 'unknown'}
         </span>
-        <span>{relativeTime(project.fsModifiedAt)}</span>
+        {project.git?.isRepo ? <GitChip git={project.git} /> : <span>{relativeTime(project.fsModifiedAt)}</span>}
       </div>
 
       <div className="flex items-center justify-between border-t border-border pt-2">

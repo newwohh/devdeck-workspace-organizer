@@ -3,7 +3,9 @@ import { spawn } from 'node:child_process'
 import { newId } from '../../db/ids'
 import { projectRepo } from '../../db/project-repo'
 import { scanRootRepo } from '../../db/scan-root-repo'
+import { refreshGitFor } from '../../engines/git/refresh'
 import { rescanRoot, type IndexEvents } from '../../engines/indexer/service'
+import type { ScanRoot } from '@shared/schemas/project'
 import { handle } from '../router'
 
 /** Registers scan-root, indexing, and project IPC handlers. */
@@ -11,6 +13,22 @@ export function registerProjectHandlers(getWindow: () => BrowserWindow | null): 
   const events: IndexEvents = {
     progress: (p) => getWindow()?.webContents.send('events.scan.progress', p),
     changed: (rootId) => getWindow()?.webContents.send('events.projects.changed', { rootId }),
+  }
+  const emitGitChanged = () => getWindow()?.webContents.send('events.git.changed', {})
+
+  // Index a root, then refresh git for its projects, re-broadcasting so the
+  // grid picks up git badges once they're computed.
+  async function scanAndGit(root: ScanRoot): Promise<void> {
+    await rescanRoot(root, events)
+    const { items } = scanRootGit(root.id)
+    await refreshGitFor(items, emitGitChanged)
+    emitGitChanged()
+    events.changed(root.id)
+  }
+
+  function scanRootGit(rootId: string): { items: { id: string; path: string }[] } {
+    const { items } = projectRepo.list({ rootId })
+    return { items: items.map((p) => ({ id: p.id, path: p.path })) }
   }
 
   // ─── Scan roots ─────────────────────────────────────────────────────────────
@@ -26,8 +44,8 @@ export function registerProjectHandlers(getWindow: () => BrowserWindow | null): 
 
   handle('roots.add', async (input) => {
     const root = scanRootRepo.add(input.path)
-    // Kick off an initial scan in the background.
-    void rescanRoot(root, events)
+    // Kick off an initial scan + git refresh in the background.
+    void scanAndGit(root)
     return scanRootRepo.getByPath(root.path) ?? root
   })
 
@@ -44,7 +62,7 @@ export function registerProjectHandlers(getWindow: () => BrowserWindow | null): 
       ? scanRootRepo.list().filter((r) => r.id === input.rootId)
       : scanRootRepo.list()
     void (async () => {
-      for (const root of roots) await rescanRoot(root, events)
+      for (const root of roots) await scanAndGit(root)
     })()
     return { jobId }
   })

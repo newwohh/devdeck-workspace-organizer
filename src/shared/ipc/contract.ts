@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { gitRepoRowSchema, gitStatusSchema } from '../schemas/git'
 import {
   projectDetailSchema,
   projectFilterSchema,
@@ -113,6 +114,17 @@ export const contract = {
     z.object({ ok: z.literal(true) }),
   ),
 
+  // ─── Git (read) ───────────────────────────────────────────────────────────────
+  'git.available': invoke('read', z.void(), z.object({ ok: z.boolean() })),
+  'git.status': invoke('read', z.object({ projectId: z.string() }), gitStatusSchema.nullable()),
+  'git.statusAll': invoke('read', z.void(), z.array(gitRepoRowSchema)),
+  /** Recomputes git status (all repos, or one root) in the background. */
+  'git.refresh': invoke(
+    'mutate:low',
+    z.object({ rootId: z.string().optional() }),
+    z.object({ jobId: z.string() }),
+  ),
+
   // ─── Index/project events ─────────────────────────────────────────────────────
   'events.scan.progress': event(
     z.object({
@@ -125,6 +137,7 @@ export const contract = {
     }),
   ),
   'events.projects.changed': event(z.object({ rootId: z.string().optional() })),
+  'events.git.changed': event(z.object({})),
 } as const satisfies Record<string, AnyChannelDef>
 
 export type Contract = typeof contract

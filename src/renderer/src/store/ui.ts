@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { ProjectFilter, ProjectType } from '@shared/schemas/project'
 
 export type ViewMode = 'grid' | 'list'
+export type AppView = 'dashboard' | 'git'
 
 interface ScanState {
   active: boolean
@@ -10,11 +11,13 @@ interface ScanState {
 }
 
 interface UIState {
+  activeView: AppView
   selectedId: string | null
   view: ViewMode
   filter: ProjectFilter
   scan: ScanState
 
+  setActiveView: (v: AppView) => void
   select: (id: string | null) => void
   setView: (v: ViewMode) => void
   setText: (text: string) => void
@@ -24,11 +27,13 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>((set) => ({
+  activeView: 'dashboard',
   selectedId: null,
   view: 'grid',
   filter: { sort: { by: 'modified', dir: 'desc' } },
   scan: { active: false, scanned: 0, found: 0 },
 
+  setActiveView: (activeView) => set({ activeView }),
   select: (id) => set({ selectedId: id }),
   setView: (view) => set({ view }),
   setText: (text) => set((s) => ({ filter: { ...s.filter, text: text || undefined } })),

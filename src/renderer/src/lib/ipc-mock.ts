@@ -1,3 +1,4 @@
+import type { GitStatus, GitStatusLite } from '@shared/schemas/git'
 import type { ProjectDetail, ProjectSummary, ScanRoot } from '@shared/schemas/project'
 import type { DevDeckBridge } from '@shared/ipc/api'
 
@@ -39,14 +40,40 @@ const mk = (p: Partial<ProjectSummary> & Pick<ProjectSummary, 'id' | 'name' | 't
   ...p,
 })
 
+const lite = (p: Partial<GitStatusLite>): GitStatusLite => ({
+  isRepo: true,
+  branch: 'main',
+  ahead: 0,
+  behind: 0,
+  dirty: false,
+  conflicted: false,
+  health: 'clean',
+  ...p,
+})
+
 const sampleProjects: ProjectSummary[] = [
-  mk({ id: 'p1', name: 'acme-storefront', type: 'app', frameworks: ['Next.js', 'React'], category: 'Client', favorite: true, fsModifiedAt: Date.now() - 3_600_000 }),
-  mk({ id: 'p2', name: 'acme-api', type: 'service', frameworks: ['NestJS'], category: 'Client', fsModifiedAt: Date.now() - 7_200_000 }),
-  mk({ id: 'p3', name: 'shopify-loyalty-app', type: 'app', frameworks: ['Shopify App', 'Remix'], category: 'Work', fsModifiedAt: Date.now() - 172_800_000 }),
-  mk({ id: 'p4', name: 'analytics-worker', type: 'service', primaryLanguage: 'go', packageManager: 'go', frameworks: [], fsModifiedAt: Date.now() - 600_000 }),
-  mk({ id: 'p5', name: 'design-system', type: 'library', frameworks: [], category: 'Open Source', fsModifiedAt: Date.now() - 1_209_600_000 }),
-  mk({ id: 'p6', name: 'rust-cli-tool', type: 'cli', primaryLanguage: 'rust', packageManager: 'cargo', frameworks: [], category: 'Personal', fsModifiedAt: Date.now() - 432_000_000 }),
+  mk({ id: 'p1', name: 'acme-storefront', type: 'app', frameworks: ['Next.js', 'React'], category: 'Client', favorite: true, fsModifiedAt: Date.now() - 3_600_000, git: lite({ branch: 'feat/checkout', dirty: true, ahead: 2, health: 'dirty' }) }),
+  mk({ id: 'p2', name: 'acme-api', type: 'service', frameworks: ['NestJS'], category: 'Client', fsModifiedAt: Date.now() - 7_200_000, git: lite({ branch: 'main', behind: 3, health: 'behind' }) }),
+  mk({ id: 'p3', name: 'shopify-loyalty-app', type: 'app', frameworks: ['Shopify App', 'Remix'], category: 'Work', fsModifiedAt: Date.now() - 172_800_000, git: lite({ branch: 'develop', conflicted: true, dirty: true, health: 'conflicted' }) }),
+  mk({ id: 'p4', name: 'analytics-worker', type: 'service', primaryLanguage: 'go', packageManager: 'go', frameworks: [], fsModifiedAt: Date.now() - 600_000, git: lite({ branch: 'main', health: 'clean' }) }),
+  mk({ id: 'p5', name: 'design-system', type: 'library', frameworks: [], category: 'Open Source', fsModifiedAt: Date.now() - 1_209_600_000, git: lite({ branch: 'main', dirty: true, health: 'dirty' }) }),
+  mk({ id: 'p6', name: 'rust-cli-tool', type: 'cli', primaryLanguage: 'rust', packageManager: 'cargo', frameworks: [], category: 'Personal', fsModifiedAt: Date.now() - 432_000_000, git: lite({ branch: 'main', health: 'clean' }) }),
 ]
+
+function toFullGit(p: ProjectSummary): GitStatus {
+  const g = p.git!
+  const changes = g.dirty ? 4 : 0
+  return {
+    ...g,
+    upstream: g.branch ? `origin/${g.branch}` : undefined,
+    staged: g.dirty ? 1 : 0,
+    modified: changes,
+    untracked: g.dirty ? 2 : 0,
+    remoteUrl: `git@github.com:acme/${p.name}.git`,
+    lastCommit: { hash: 'a1b2c3d', message: `chore: update ${p.name}`, author: 'dev', at: Date.now() - 3_600_000 },
+    capturedAt: Date.now(),
+  }
+}
 
 export const browserMockBridge: DevDeckBridge = {
   async invoke(channel, input): Promise<any> {
@@ -103,6 +130,19 @@ export const browserMockBridge: DevDeckBridge = {
         return sampleProjects.find((p) => p.id === (input as { id: string }).id) ?? sampleProjects[0]
       case 'projects.open':
         return { ok: true }
+      case 'git.available':
+        return { ok: true }
+      case 'git.status': {
+        const p = sampleProjects.find((x) => x.id === (input as { projectId: string }).projectId)
+        if (!p?.git) return null
+        return toFullGit(p)
+      }
+      case 'git.statusAll':
+        return sampleProjects
+          .filter((p) => p.git?.isRepo)
+          .map((p) => ({ projectId: p.id, name: p.name, path: p.path, git: toFullGit(p) }))
+      case 'git.refresh':
+        return { jobId: 'gitjob_demo' }
       default:
         throw new Error(`browserMockBridge: unhandled channel "${channel}"`)
     }

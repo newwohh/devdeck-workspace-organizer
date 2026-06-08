@@ -6,6 +6,7 @@ import { assertHandlersComplete, bindRouter } from './ipc/router'
 import { registerSystemHandlers } from './ipc/handlers/system'
 import { registerSettingsHandlers } from './ipc/handlers/settings'
 import { registerProjectHandlers } from './ipc/handlers/projects'
+import { registerGitHandlers } from './ipc/handlers/git'
 
 let mainWindow: BrowserWindow | null = null
 const getWindow = () => mainWindow
@@ -53,6 +54,7 @@ app.whenReady().then(() => {
   registerSystemHandlers()
   registerSettingsHandlers(getWindow)
   registerProjectHandlers(getWindow)
+  registerGitHandlers(getWindow)
   assertHandlersComplete()
   bindRouter(getWindow)
 

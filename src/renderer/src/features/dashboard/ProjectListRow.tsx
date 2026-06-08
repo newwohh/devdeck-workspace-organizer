@@ -1,5 +1,6 @@
 import type { ProjectSummary } from '@shared/schemas/project'
 import { Badge, StatusDot } from '../../components/ui'
+import { GitChip } from '../../components/GitChip'
 import { cn } from '../../lib/cn'
 import { homePath, langColor, relativeTime, typeIcon } from '../../lib/format'
 
@@ -36,13 +37,16 @@ export function ProjectListRow({
         {project.frameworks.length === 0 && <Badge className="capitalize">{project.type}</Badge>}
       </span>
 
-      <span className="flex items-center gap-1.5 text-xs text-muted">
-        <span
-          className="inline-block h-2 w-2 rounded-full"
-          style={{ background: langColor(project.primaryLanguage) }}
-          aria-hidden
-        />
-        {project.primaryLanguage ?? '—'}
+      <span className="flex items-center gap-2 text-xs text-muted">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ background: langColor(project.primaryLanguage) }}
+            aria-hidden
+          />
+          {project.primaryLanguage ?? '—'}
+        </span>
+        <GitChip git={project.git} />
       </span>
 
       <span className="flex items-center gap-3 text-xs text-muted">

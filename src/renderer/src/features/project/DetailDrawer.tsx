@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { Badge, Button, StatusDot } from '../../components/ui'
 import { ipc } from '../../lib/ipc'
 import { homePath, relativeTime, typeIcon } from '../../lib/format'
@@ -7,6 +8,11 @@ import { useProject } from '../dashboard/useProjects'
 export function DetailDrawer() {
   const { selectedId, select } = useUIStore()
   const { data: project, isLoading } = useProject(selectedId)
+  const git = useQuery({
+    queryKey: ['git', 'status', selectedId],
+    queryFn: () => ipc.invoke('git.status', { projectId: selectedId! }),
+    enabled: !!selectedId,
+  })
 
   if (!selectedId) return null
 
@@ -55,6 +61,37 @@ export function DetailDrawer() {
             </Field>
             <Field label="Modified">{relativeTime(project.fsModifiedAt)}</Field>
           </Section>
+
+          {git.data?.isRepo && (
+            <Section title="Git">
+              <Field label="Branch">{git.data.branch ?? 'detached'}</Field>
+              <Field label="State">
+                <span className="flex items-center gap-1.5 capitalize">
+                  <StatusDot
+                    level={git.data.health === 'clean' ? 'ok' : git.data.health === 'conflicted' ? 'error' : 'warn'}
+                  />
+                  {git.data.health}
+                </span>
+              </Field>
+              {(git.data.ahead > 0 || git.data.behind > 0) && (
+                <Field label="Ahead / behind">
+                  ↑{git.data.ahead} ↓{git.data.behind}
+                </Field>
+              )}
+              {git.data.dirty && (
+                <Field label="Changes">
+                  {git.data.staged} staged · {git.data.modified} modified · {git.data.untracked} untracked
+                </Field>
+              )}
+              {git.data.lastCommit && (
+                <Field label="Last commit">
+                  <span className="max-w-[200px] truncate" title={git.data.lastCommit.message}>
+                    {git.data.lastCommit.message}
+                  </span>
+                </Field>
+              )}
+            </Section>
+          )}
 
           {project.stack.length > 0 && (
             <Section title="Stack">

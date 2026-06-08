@@ -8,6 +8,7 @@ import type {
 } from '@shared/schemas/project'
 import type { DiscoveredProject } from '../engines/indexer/types'
 import { getDb } from './connection'
+import { gitRepo } from './git-repo'
 import { projectIdForPath } from './ids'
 
 interface ProjectRow {
@@ -208,6 +209,9 @@ export const projectRepo = {
       const want = new Set(filter.categories)
       items = items.filter((p) => p.category && want.has(p.category))
     }
+    // Attach cached git lite in one batch query.
+    const gitMap = gitRepo.liteByProject()
+    for (const it of items) it.git = gitMap.get(it.id)
     return { items, total: items.length }
   },
 
@@ -215,6 +219,7 @@ export const projectRepo = {
     const row = getDb().prepare('SELECT * FROM project WHERE id = ?').get(id) as ProjectRow | undefined
     if (!row) return null
     const summary = toSummary(row)
+    summary.git = gitRepo.liteByProject().get(id)
 
     const stack = getDb()
       .prepare('SELECT layer, name, version, confidence, source FROM project_stack WHERE project_id = ? ORDER BY confidence DESC')
