@@ -6,6 +6,20 @@ manage all your local development projects from a single native macOS interface.
 > **Status:** Phase 0 (foundations) — the secure process model, typed IPC, and storage layer are
 > wired end to end. Feature engines land in subsequent phases.
 
+## About
+
+DevDeck collapses the overhead of juggling many local projects into one native surface: it
+automatically **discovers** projects across your dev folders, **classifies** their stack
+(React, Next.js, Django, Go, Rust, Shopify apps, and more), and surfaces their live state —
+git status, running services, ports, URLs, Docker, and databases — at a glance. Organize
+projects into workspaces, run their scripts, and launch them in your editor of choice without
+leaving the app.
+
+Built for freelancers, agency and full-stack developers, Shopify developers, and startup teams
+who manage multiple projects at once. macOS-first, local-first, privacy-first.
+
+Development happens on a **single `main` branch**.
+
 ## Stack
 
 - **Electron** + **TypeScript** (strict) via **electron-vite**
@@ -33,7 +47,8 @@ The full technical blueprint (product spec, data model, engines, frontend, roadm
 ```bash
 npm install
 npm run rebuild        # rebuild native modules (better-sqlite3) against Electron — needed before `dev`
-npm run dev            # launch the app with HMR
+npm run dev            # launch the real Electron app with HMR (native window, full IPC + SQLite)
+npm run dev:web        # serve just the renderer UI in a browser (port 5180); IPC is mocked
 ```
 
 ## Verify
