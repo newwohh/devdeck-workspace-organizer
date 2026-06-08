@@ -10,10 +10,17 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   root: 'src/renderer',
   resolve: {
+    // Dedupe React so the standalone preview never loads two copies (which
+    // triggers "Invalid hook call"). electron-vite's renderer config does this
+    // for the real app; we must do it explicitly here.
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@shared': resolve('src/shared'),
       '@renderer': resolve('src/renderer/src'),
     },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-dom/client', '@tanstack/react-query', 'zustand'],
   },
   plugins: [react()],
   server: { port: 5180, strictPort: true },

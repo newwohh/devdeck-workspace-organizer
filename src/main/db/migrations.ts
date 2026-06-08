@@ -28,4 +28,73 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    name: 'projects',
+    sql: /* sql */ `
+      CREATE TABLE project (
+        id               TEXT PRIMARY KEY,
+        root_id          TEXT NOT NULL REFERENCES scan_root(id) ON DELETE CASCADE,
+        path             TEXT NOT NULL UNIQUE,
+        name             TEXT NOT NULL,
+        type             TEXT NOT NULL,
+        primary_language TEXT,
+        package_manager  TEXT,
+        is_monorepo      INTEGER NOT NULL DEFAULT 0,
+        category         TEXT,
+        health           TEXT NOT NULL DEFAULT 'unknown',
+        favorite         INTEGER NOT NULL DEFAULT 0,
+        description      TEXT,
+        readme_path      TEXT,
+        size_bytes       INTEGER,
+        fs_modified_at   INTEGER,
+        last_opened_at   INTEGER,
+        first_seen_at    INTEGER NOT NULL,
+        last_indexed_at  INTEGER NOT NULL,
+        index_hash       TEXT,
+        archived         INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE INDEX idx_project_root ON project(root_id);
+      CREATE INDEX idx_project_modified ON project(fs_modified_at DESC);
+      CREATE INDEX idx_project_type ON project(type);
+
+      CREATE TABLE project_stack (
+        project_id TEXT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+        layer      TEXT NOT NULL,
+        name       TEXT NOT NULL,
+        version    TEXT,
+        confidence REAL NOT NULL DEFAULT 1.0,
+        source     TEXT,
+        PRIMARY KEY (project_id, layer, name)
+      );
+
+      CREATE TABLE project_script (
+        project_id TEXT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+        name       TEXT NOT NULL,
+        command    TEXT NOT NULL,
+        runner     TEXT NOT NULL,
+        kind       TEXT,
+        PRIMARY KEY (project_id, name)
+      );
+
+      CREATE TABLE project_package (
+        project_id       TEXT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+        rel_path         TEXT NOT NULL,
+        name             TEXT NOT NULL,
+        primary_language TEXT,
+        PRIMARY KEY (project_id, rel_path)
+      );
+
+      CREATE TABLE tag (
+        id    TEXT PRIMARY KEY,
+        name  TEXT NOT NULL UNIQUE,
+        color TEXT
+      );
+      CREATE TABLE project_tag (
+        project_id TEXT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+        tag_id     TEXT NOT NULL REFERENCES tag(id) ON DELETE CASCADE,
+        PRIMARY KEY (project_id, tag_id)
+      );
+    `,
+  },
 ]

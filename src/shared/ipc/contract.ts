@@ -1,4 +1,10 @@
 import { z } from 'zod'
+import {
+  projectDetailSchema,
+  projectFilterSchema,
+  projectSummarySchema,
+  scanRootSchema,
+} from '../schemas/project'
 
 /**
  * The single source of truth for every IPC channel.
@@ -72,6 +78,53 @@ export const contract = {
 
   /** Push: emitted when a setting changes (proves main→renderer events). */
   'events.settings.changed': event(z.object({ key: z.string(), value: z.unknown().nullable() })),
+
+  // ─── Scan roots ─────────────────────────────────────────────────────────────
+  'roots.list': invoke('read', z.void(), z.array(scanRootSchema)),
+  'roots.add': invoke('mutate:medium', z.object({ path: z.string() }), scanRootSchema),
+  'roots.remove': invoke('mutate:medium', z.object({ id: z.string() }), z.object({ ok: z.literal(true) })),
+  /** Opens a native folder picker; returns the chosen path (or null if cancelled). */
+  'roots.pick': invoke('read', z.void(), z.object({ path: z.string().nullable() })),
+
+  // ─── Indexing ───────────────────────────────────────────────────────────────
+  'index.rescan': invoke(
+    'mutate:low',
+    z.object({ rootId: z.string().optional() }),
+    z.object({ jobId: z.string() }),
+  ),
+
+  // ─── Projects ───────────────────────────────────────────────────────────────
+  'projects.list': invoke(
+    'read',
+    projectFilterSchema,
+    z.object({ items: z.array(projectSummarySchema), total: z.number() }),
+  ),
+  'projects.get': invoke('read', z.object({ id: z.string() }), projectDetailSchema.nullable()),
+  'projects.toggleFavorite': invoke('mutate:low', z.object({ id: z.string() }), projectSummarySchema),
+  'projects.setCategory': invoke(
+    'mutate:low',
+    z.object({ id: z.string(), category: z.string().nullable() }),
+    projectSummarySchema,
+  ),
+  /** Opens the project in an external target. */
+  'projects.open': invoke(
+    'mutate:low',
+    z.object({ id: z.string(), target: z.enum(['editor', 'terminal', 'finder']) }),
+    z.object({ ok: z.literal(true) }),
+  ),
+
+  // ─── Index/project events ─────────────────────────────────────────────────────
+  'events.scan.progress': event(
+    z.object({
+      jobId: z.string(),
+      rootId: z.string(),
+      scanned: z.number(),
+      found: z.number(),
+      done: z.boolean(),
+      currentPath: z.string().optional(),
+    }),
+  ),
+  'events.projects.changed': event(z.object({ rootId: z.string().optional() })),
 } as const satisfies Record<string, AnyChannelDef>
 
 export type Contract = typeof contract

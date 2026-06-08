@@ -5,6 +5,7 @@ import { applySecurity } from './security'
 import { assertHandlersComplete, bindRouter } from './ipc/router'
 import { registerSystemHandlers } from './ipc/handlers/system'
 import { registerSettingsHandlers } from './ipc/handlers/settings'
+import { registerProjectHandlers } from './ipc/handlers/projects'
 
 let mainWindow: BrowserWindow | null = null
 const getWindow = () => mainWindow
@@ -51,6 +52,7 @@ app.whenReady().then(() => {
   // Wire IPC: register handlers, then bind the validated router.
   registerSystemHandlers()
   registerSettingsHandlers(getWindow)
+  registerProjectHandlers(getWindow)
   assertHandlersComplete()
   bindRouter(getWindow)
 
