@@ -17,14 +17,12 @@ export const MARKER_FILE_ECOSYSTEM: Record<string, string> = {
   // Go / Rust
   'go.mod': 'go',
   'Cargo.toml': 'rust',
-  // Python
+  // Python (build/dependency manifests only — not loose config like setup.cfg
+  // or conda env files, which aren't reliable "this is a project" signals)
   'pyproject.toml': 'python',
   'requirements.txt': 'python',
   'Pipfile': 'python',
   'setup.py': 'python',
-  'setup.cfg': 'python',
-  'environment.yml': 'python',
-  'conda.yaml': 'python',
   // PHP / Ruby
   'composer.json': 'php',
   'Gemfile': 'ruby',
@@ -41,9 +39,9 @@ export const MARKER_FILE_ECOSYSTEM: Record<string, string> = {
   'conanfile.py': 'cpp',
   'vcpkg.json': 'cpp',
   'configure.ac': 'c',
-  'Makefile': 'make',
-  'makefile': 'make',
-  'GNUmakefile': 'make',
+  // NOTE: a bare Makefile is intentionally NOT a marker — it's a weak signal
+  // (build helpers live in all sorts of non-project folders). A real C/Make
+  // project is found via CMakeLists/configure.ac/.git instead.
   // .NET (also via *.csproj/*.sln suffixes below)
   'global.json': 'dotnet',
   // Swift / Apple
@@ -56,10 +54,8 @@ export const MARKER_FILE_ECOSYSTEM: Record<string, string> = {
   'rebar.config': 'erlang',
   // Zig
   'build.zig': 'zig',
-  // Nix
+  // Nix (flake defines a project; default/shell.nix are often just dev shells)
   'flake.nix': 'nix',
-  'default.nix': 'nix',
-  'shell.nix': 'nix',
   // Haskell
   'stack.yaml': 'haskell',
   'cabal.project': 'haskell',

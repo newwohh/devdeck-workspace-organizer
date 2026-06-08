@@ -8,8 +8,13 @@ import { rescanRoot, type IndexEvents } from '../../engines/indexer/service'
 import type { ScanRoot } from '@shared/schemas/project'
 import { handle } from '../router'
 
+export interface ProjectHandlers {
+  /** Rescans every enabled root (used to auto-populate on launch). */
+  rescanAll: () => void
+}
+
 /** Registers scan-root, indexing, and project IPC handlers. */
-export function registerProjectHandlers(getWindow: () => BrowserWindow | null): void {
+export function registerProjectHandlers(getWindow: () => BrowserWindow | null): ProjectHandlers {
   const events: IndexEvents = {
     progress: (p) => getWindow()?.webContents.send('events.scan.progress', p),
     changed: (rootId) => getWindow()?.webContents.send('events.projects.changed', { rootId }),
@@ -93,4 +98,14 @@ export function registerProjectHandlers(getWindow: () => BrowserWindow | null): 
     projectRepo.markOpened(input.id)
     return { ok: true as const }
   })
+
+  function rescanAll(): void {
+    const roots = scanRootRepo.list().filter((r) => r.enabled)
+    if (roots.length === 0) return
+    void (async () => {
+      for (const root of roots) await scanAndGit(root)
+    })()
+  }
+
+  return { rescanAll }
 }

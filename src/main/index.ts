@@ -54,13 +54,17 @@ app.whenReady().then(() => {
   // Wire IPC: register handlers, then bind the validated router.
   registerSystemHandlers()
   registerSettingsHandlers(getWindow)
-  registerProjectHandlers(getWindow)
+  const projects = registerProjectHandlers(getWindow)
   registerGitHandlers(getWindow)
   registerRuntimeHandlers(getWindow)
   assertHandlersComplete()
   bindRouter(getWindow)
 
   createWindow()
+
+  // Auto-scan saved folders on launch so projects appear without a manual
+  // Rescan. Persisted projects paint instantly; this refreshes + finds new ones.
+  mainWindow?.webContents.once('did-finish-load', () => projects.rescanAll())
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

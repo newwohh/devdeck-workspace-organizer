@@ -53,6 +53,16 @@ beforeAll(async () => {
   const py = join(root, 'py-legacy')
   await mkdir(py, { recursive: true })
   await writeFile(join(py, 'setup.py'), 'from setuptools import setup\nsetup(name="legacy")\n')
+
+  // NOT projects: loose source files, and a bare Makefile (weak signal).
+  const loose = join(root, 'loose-snippets')
+  await mkdir(loose, { recursive: true })
+  await writeFile(join(loose, 'main.cpp'), 'int main(){return 0;}\n')
+  await writeFile(join(loose, 'util.cpp'), '\n')
+
+  const mkOnly = join(root, 'makefile-only')
+  await mkdir(mkOnly, { recursive: true })
+  await writeFile(join(mkOnly, 'Makefile'), 'all:\n\techo hi\n')
 })
 
 afterAll(async () => {
@@ -64,6 +74,13 @@ describe('walkForProjects', () => {
     const found = await walkForProjects(root, 6)
     const names = found.map((c) => c.path.split('/').pop()).sort()
     expect(names).toEqual(['cpp-engine', 'dotnet-api', 'go-svc', 'py-legacy', 'swift-lib', 'web-app'])
+  })
+
+  it('does NOT treat loose source files or a bare Makefile as projects', async () => {
+    const found = await walkForProjects(root, 6)
+    const names = found.map((c) => c.path.split('/').pop())
+    expect(names).not.toContain('loose-snippets')
+    expect(names).not.toContain('makefile-only')
   })
 })
 
