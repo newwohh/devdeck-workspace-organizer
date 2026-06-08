@@ -1,14 +1,12 @@
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { HARD_IGNORE, MARKER_FILES } from '@shared/constants/markers'
+import { HARD_IGNORE, isMarker } from '@shared/constants/markers'
 
 export interface Candidate {
   path: string
   /** Marker file names found in this directory. */
   markers: string[]
 }
-
-const MARKER_SET = new Set(MARKER_FILES)
 
 /**
  * Walks a scan root and yields project boundaries. A directory containing any
@@ -32,8 +30,7 @@ export async function walkForProjects(
       return // unreadable (permissions, broken symlink) — skip
     }
 
-    const names = new Set(entries.map((e) => e.name))
-    const markers = MARKER_FILES.filter((m) => names.has(m))
+    const markers = entries.map((e) => e.name).filter(isMarker)
     if (markers.length > 0) {
       found.push({ path: dir, markers })
       return // stop descending — this is a project boundary
@@ -51,5 +48,3 @@ export async function walkForProjects(
   await visit(root, 0)
   return found
 }
-
-export { MARKER_SET }

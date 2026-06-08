@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
-import { MARKERS, MONOREPO_MARKERS } from '@shared/constants/markers'
+import { markerEcosystem, MONOREPO_MARKERS } from '@shared/constants/markers'
 import type { ProjectScript, ProjectType } from '@shared/schemas/project'
 import { runDetectors } from '../stack'
 import type { DetectContext, PackageJson } from '../stack'
@@ -15,7 +15,11 @@ export async function analyzeProject(path: string, markers: string[]): Promise<D
   const files = new Set(entries.map((e) => e.name))
 
   const pkg = files.has('package.json') ? await readJson<PackageJson>(join(path, 'package.json')) : undefined
-  const ecosystems = new Set(markers.map((m) => MARKERS[m]?.ecosystem).filter(Boolean) as string[])
+  const ecosystems = new Set<string>()
+  for (const m of markers) {
+    const eco = markerEcosystem(m)
+    if (eco) ecosystems.add(eco)
+  }
 
   const deps = new Map<string, string>()
   if (pkg) {
@@ -89,9 +93,22 @@ function detectLanguage(
     php: 'php',
     ruby: 'ruby',
     java: 'java',
+    scala: 'scala',
     dart: 'dart',
     elixir: 'elixir',
+    erlang: 'erlang',
+    dotnet: 'csharp',
+    cpp: 'cpp',
+    c: 'c',
+    swift: 'swift',
+    zig: 'zig',
+    nix: 'nix',
+    haskell: 'haskell',
+    clojure: 'clojure',
+    crystal: 'crystal',
+    nim: 'nim',
   }
+  // Real languages win over build-system-only ecosystems (make, bazel, vcs).
   for (const eco of ecosystems) if (map[eco]) return map[eco]
   return undefined
 }
@@ -106,8 +123,22 @@ function detectPackageManager(files: Set<string>, pkg?: PackageJson): string | u
   if (files.has('Cargo.toml')) return 'cargo'
   if (files.has('go.mod')) return 'go'
   if (files.has('composer.json')) return 'composer'
-  if (files.has('requirements.txt') || files.has('pyproject.toml')) return 'pip'
+  if (files.has('Package.swift')) return 'swift'
+  if (hasSuffix(files, '.csproj', '.sln', '.fsproj') || files.has('global.json')) return 'dotnet'
+  if (files.has('CMakeLists.txt')) return 'cmake'
+  if (files.has('meson.build')) return 'meson'
+  if (files.has('build.sbt')) return 'sbt'
+  if (files.has('build.zig')) return 'zig'
+  if (files.has('stack.yaml')) return 'stack'
+  if (files.has('deps.edn')) return 'clojure'
+  if (files.has('Makefile') || files.has('makefile') || files.has('GNUmakefile')) return 'make'
+  if (files.has('requirements.txt') || files.has('pyproject.toml') || files.has('setup.py')) return 'pip'
   return undefined
+}
+
+function hasSuffix(files: Set<string>, ...suffixes: string[]): boolean {
+  for (const f of files) if (suffixes.some((s) => f.endsWith(s))) return true
+  return false
 }
 
 function classifyScriptKind(name: string): ProjectScript['kind'] {
@@ -149,6 +180,28 @@ function collectScripts(
   }
   if (files.has('manage.py')) {
     out.push({ name: 'runserver', command: 'python manage.py runserver', runner: 'python', kind: 'dev' })
+  }
+  if (files.has('CMakeLists.txt')) {
+    out.push(
+      { name: 'configure', command: 'cmake -B build', runner: 'other', kind: 'build' },
+      { name: 'build', command: 'cmake --build build', runner: 'other', kind: 'build' },
+    )
+  } else if (files.has('Makefile') || files.has('makefile') || files.has('GNUmakefile')) {
+    out.push({ name: 'make', command: 'make', runner: 'make', kind: 'build' })
+  }
+  if (hasSuffix(files, '.csproj', '.sln', '.fsproj')) {
+    out.push(
+      { name: 'build', command: 'dotnet build', runner: 'other', kind: 'build' },
+      { name: 'run', command: 'dotnet run', runner: 'other', kind: 'dev' },
+      { name: 'test', command: 'dotnet test', runner: 'other', kind: 'test' },
+    )
+  }
+  if (files.has('Package.swift')) {
+    out.push(
+      { name: 'build', command: 'swift build', runner: 'other', kind: 'build' },
+      { name: 'run', command: 'swift run', runner: 'other', kind: 'dev' },
+      { name: 'test', command: 'swift test', runner: 'other', kind: 'test' },
+    )
   }
   return out
 }
