@@ -82,6 +82,26 @@ describe('walkForProjects', () => {
     expect(names).not.toContain('loose-snippets')
     expect(names).not.toContain('makefile-only')
   })
+
+  it('treats a marker-bearing parent as a container, not a single project', async () => {
+    // A parent folder that is itself a git repo, containing real projects.
+    const parent = join(root, 'git-parent')
+    await mkdir(join(parent, '.git'), { recursive: true })
+    await mkdir(join(parent, 'app-a'), { recursive: true })
+    await writeFile(join(parent, 'app-a', 'package.json'), '{"name":"app-a"}')
+    await mkdir(join(parent, 'app-b'), { recursive: true })
+    await writeFile(join(parent, 'app-b', 'go.mod'), 'module app-b\n')
+
+    const found = await walkForProjects(parent, 6)
+    const names = found.map((c) => c.path.split('/').pop()).sort()
+    // Finds the two inner projects, NOT the git-parent folder itself.
+    expect(names).toEqual(['app-a', 'app-b'])
+  })
+
+  it('falls back to the root itself when it is a single project', async () => {
+    const found = await walkForProjects(join(root, 'go-svc'), 6)
+    expect(found.map((c) => c.path.split('/').pop())).toEqual(['go-svc'])
+  })
 })
 
 describe('analyzeProject', () => {
