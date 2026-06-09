@@ -140,6 +140,10 @@ export const browserMockBridge: DevDeckBridge = {
         return sampleRoot
       case 'roots.remove':
         return { ok: true }
+      case 'ignores.list':
+        return []
+      case 'ignores.remove':
+        return { ok: true }
       case 'index.rescan':
         return { jobId: 'job_demo' }
       case 'projects.list': {

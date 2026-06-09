@@ -88,6 +88,10 @@ export const contract = {
   /** Opens a native folder picker; returns the chosen path (or null if cancelled). */
   'roots.pick': invoke('read', z.void(), z.object({ path: z.string().nullable() })),
 
+  // ─── Removed/ignored projects ─────────────────────────────────────────────────
+  'ignores.list': invoke('read', z.void(), z.array(z.object({ path: z.string(), ignoredAt: z.number() }))),
+  'ignores.remove': invoke('mutate:low', z.object({ path: z.string() }), z.object({ ok: z.literal(true) })),
+
   // ─── Indexing ───────────────────────────────────────────────────────────────
   'index.rescan': invoke(
     'mutate:low',

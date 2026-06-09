@@ -2,6 +2,7 @@ import { Dashboard } from '../features/dashboard/Dashboard'
 import { GitView } from '../features/git/GitView'
 import { ProcessView } from '../features/process/ProcessView'
 import { DetailDrawer } from '../features/project/DetailDrawer'
+import { SettingsView } from '../features/settings/SettingsView'
 import { Sidebar } from '../features/sidebar/Sidebar'
 import { useUIStore } from '../store/ui'
 
@@ -9,6 +10,7 @@ const VIEWS = {
   dashboard: Dashboard,
   git: GitView,
   processes: ProcessView,
+  settings: SettingsView,
 }
 
 export function AppShell() {

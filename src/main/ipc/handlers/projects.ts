@@ -60,6 +60,14 @@ export function registerProjectHandlers(getWindow: () => BrowserWindow | null): 
     return { ok: true as const }
   })
 
+  handle('ignores.list', () => projectRepo.ignoredList())
+
+  handle('ignores.remove', (input) => {
+    projectRepo.unignore(input.path)
+    rescanAll() // re-discover the restored path
+    return { ok: true as const }
+  })
+
   // ─── Indexing ───────────────────────────────────────────────────────────────
   handle('index.rescan', (input) => {
     const jobId = newId('job')

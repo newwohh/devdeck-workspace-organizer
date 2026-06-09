@@ -221,15 +221,37 @@ export const projectRepo = {
     const summary = toSummary(row)
     summary.git = gitRepo.liteByProject().get(id)
 
-    const stack = getDb()
+    // SQLite returns NULL for empty optional columns; Zod's .optional() wants
+    // `undefined`, so coerce null → undefined on the way out.
+    const stackRows = getDb()
       .prepare('SELECT layer, name, version, confidence, source FROM project_stack WHERE project_id = ? ORDER BY confidence DESC')
-      .all(id) as StackItem[]
-    const scripts = getDb()
+      .all(id) as { layer: string; name: string; version: string | null; confidence: number; source: string | null }[]
+    const stack: StackItem[] = stackRows.map((r) => ({
+      layer: r.layer as StackItem['layer'],
+      name: r.name,
+      version: r.version ?? undefined,
+      confidence: r.confidence,
+      source: r.source ?? undefined,
+    }))
+
+    const scriptRows = getDb()
       .prepare('SELECT name, command, runner, kind FROM project_script WHERE project_id = ?')
-      .all(id) as ProjectScript[]
-    const packages = getDb()
+      .all(id) as { name: string; command: string; runner: string; kind: string | null }[]
+    const scripts: ProjectScript[] = scriptRows.map((r) => ({
+      name: r.name,
+      command: r.command,
+      runner: r.runner as ProjectScript['runner'],
+      kind: (r.kind ?? undefined) as ProjectScript['kind'],
+    }))
+
+    const pkgRows = getDb()
       .prepare('SELECT rel_path AS relPath, name, primary_language AS primaryLanguage FROM project_package WHERE project_id = ?')
-      .all(id) as ProjectDetail['packages']
+      .all(id) as { relPath: string; name: string; primaryLanguage: string | null }[]
+    const packages = pkgRows.map((r) => ({
+      relPath: r.relPath,
+      name: r.name,
+      primaryLanguage: r.primaryLanguage ?? undefined,
+    }))
 
     return {
       ...summary,
@@ -289,5 +311,16 @@ export const projectRepo = {
   ignoredPaths(): Set<string> {
     const rows = getDb().prepare('SELECT path FROM ignored_path').all() as { path: string }[]
     return new Set(rows.map((r) => r.path))
+  },
+
+  ignoredList(): { path: string; ignoredAt: number }[] {
+    return getDb()
+      .prepare('SELECT path, ignored_at AS ignoredAt FROM ignored_path ORDER BY ignored_at DESC')
+      .all() as { path: string; ignoredAt: number }[]
+  },
+
+  /** Un-ignores a path so the next scan can rediscover it. */
+  unignore(path: string): void {
+    getDb().prepare('DELETE FROM ignored_path WHERE path = ?').run(path)
   },
 }
