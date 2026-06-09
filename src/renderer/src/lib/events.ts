@@ -10,6 +10,7 @@ export function wireLiveEvents(qc: QueryClient): () => void {
   const disposers = [
     ipc.on('events.projects.changed', () => {
       qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project'] }) // open detail drawers
       qc.invalidateQueries({ queryKey: ['roots'] })
     }),
 
@@ -23,6 +24,7 @@ export function wireLiveEvents(qc: QueryClient): () => void {
 
     ipc.on('events.git.changed', () => {
       qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project'] })
       qc.invalidateQueries({ queryKey: ['git'] })
     }),
 

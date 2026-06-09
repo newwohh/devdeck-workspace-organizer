@@ -9,7 +9,7 @@ import { RunPanel } from './RunPanel'
 export function DetailDrawer() {
   const qc = useQueryClient()
   const { selectedId, select } = useUIStore()
-  const { data: project, isLoading } = useProject(selectedId)
+  const { data: project, isLoading, isError, refetch } = useProject(selectedId)
   const git = useQuery({
     queryKey: ['git', 'status', selectedId],
     queryFn: () => ipc.invoke('git.status', { projectId: selectedId! }),
@@ -28,7 +28,23 @@ export function DetailDrawer() {
       </header>
 
       {isLoading || !project ? (
-        <div className="p-4 text-sm text-muted">{isLoading ? 'Loading…' : 'Not found.'}</div>
+        <div className="space-y-3 p-4 text-sm text-muted">
+          {isLoading ? (
+            'Loading…'
+          ) : (
+            <>
+              <p>{isError ? "Couldn't load this project." : 'This project is no longer indexed.'}</p>
+              <Button
+                onClick={() => {
+                  void refetch()
+                  void ipc.invoke('index.rescan', {})
+                }}
+              >
+                ⟳ Retry / re-scan
+              </Button>
+            </>
+          )}
+        </div>
       ) : (
         <div className="flex-1 space-y-5 overflow-y-auto p-4">
           <div className="space-y-1">
