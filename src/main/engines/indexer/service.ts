@@ -2,6 +2,7 @@ import type { ScanRoot } from '@shared/schemas/project'
 import { isFrameworkAllowed } from '@shared/constants/frameworks'
 import { newId } from '../../db/ids'
 import { projectRepo } from '../../db/project-repo'
+import { getFrameworkFilter } from './allowlist'
 import { analyzeProject } from './analyze'
 import { walkForProjects } from './walk'
 
@@ -36,6 +37,7 @@ export async function rescanRoot(root: ScanRoot, events: IndexEvents): Promise<n
   const ignored = projectRepo.ignoredPaths()
   const candidates = allCandidates.filter((c) => !ignored.has(c.path))
 
+  const filter = getFrameworkFilter()
   const keepPaths: string[] = []
   let found = 0
   let cursor = 0
@@ -46,7 +48,7 @@ export async function rescanRoot(root: ScanRoot, events: IndexEvents): Promise<n
       try {
         const discovered = await analyzeProject(candidate.path, candidate.markers)
         // Allowlist: only index projects using a permitted framework.
-        if (isFrameworkAllowed(discovered.frameworks)) {
+        if (isFrameworkAllowed(discovered.frameworks, filter)) {
           projectRepo.upsert(root.id, discovered)
           keepPaths.push(candidate.path)
         }

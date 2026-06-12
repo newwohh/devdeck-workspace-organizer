@@ -4,7 +4,9 @@ import { newId } from '../../db/ids'
 import { projectRepo } from '../../db/project-repo'
 import { scanRootRepo } from '../../db/scan-root-repo'
 import { refreshGitFor } from '../../engines/git/refresh'
+import { getFrameworkFilter, setFrameworkFilter } from '../../engines/indexer/allowlist'
 import { rescanRoot, type IndexEvents } from '../../engines/indexer/service'
+import { ALL_FRAMEWORKS } from '@shared/constants/frameworks'
 import type { ScanRoot } from '@shared/schemas/project'
 import { handle } from '../router'
 
@@ -57,6 +59,14 @@ export function registerProjectHandlers(getWindow: () => BrowserWindow | null): 
   handle('roots.remove', (input) => {
     scanRootRepo.remove(input.id)
     events.changed(undefined as unknown as string)
+    return { ok: true as const }
+  })
+
+  handle('frameworks.get', () => ({ all: ALL_FRAMEWORKS, filter: getFrameworkFilter() }))
+
+  handle('frameworks.set', (input) => {
+    setFrameworkFilter(input)
+    rescanAll() // apply the new filter (adds/prunes projects)
     return { ok: true as const }
   })
 

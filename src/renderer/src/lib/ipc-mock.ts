@@ -144,6 +144,13 @@ export const browserMockBridge: DevDeckBridge = {
         return []
       case 'ignores.remove':
         return { ok: true }
+      case 'frameworks.get':
+        return {
+          all: ['React', 'Next.js', 'Remix', 'Astro', 'Vue', 'Express', 'NestJS', 'Django'],
+          filter: { enabled: true, allowed: ['React', 'Next.js', 'Astro', 'Express'] },
+        }
+      case 'frameworks.set':
+        return { ok: true }
       case 'index.rescan':
         return { jobId: 'job_demo' }
       case 'projects.list': {

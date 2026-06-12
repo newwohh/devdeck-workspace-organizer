@@ -99,6 +99,21 @@ export const contract = {
     z.object({ jobId: z.string() }),
   ),
 
+  // ─── Framework filter ─────────────────────────────────────────────────────────
+  'frameworks.get': invoke(
+    'read',
+    z.void(),
+    z.object({
+      all: z.array(z.string()),
+      filter: z.object({ enabled: z.boolean(), allowed: z.array(z.string()) }),
+    }),
+  ),
+  'frameworks.set': invoke(
+    'mutate:low',
+    z.object({ enabled: z.boolean(), allowed: z.array(z.string()) }),
+    z.object({ ok: z.literal(true) }),
+  ),
+
   // ─── Projects ───────────────────────────────────────────────────────────────
   'projects.list': invoke(
     'read',

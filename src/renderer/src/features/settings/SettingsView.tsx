@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../../components/ui'
+import { cn } from '../../lib/cn'
 import { homePath } from '../../lib/format'
 import { ipc } from '../../lib/ipc'
 import { useRoots } from '../dashboard/useProjects'
 import { useAddFolder, useIgnores } from './useFolders'
+import { useFrameworkFilter, useSetFrameworkFilter } from './useFrameworkFilter'
 
 export function SettingsView() {
   const qc = useQueryClient()
@@ -71,6 +73,9 @@ export function SettingsView() {
           </div>
         </section>
 
+        {/* Framework filter */}
+        <FrameworksSection />
+
         {/* Removed projects */}
         <section className="space-y-3">
           <div>
@@ -99,5 +104,79 @@ export function SettingsView() {
         </section>
       </div>
     </div>
+  )
+}
+
+function FrameworksSection() {
+  const { data } = useFrameworkFilter()
+  const save = useSetFrameworkFilter()
+  if (!data) return null
+  const { all, filter } = data
+
+  const toggleEnabled = () => void save({ ...filter, enabled: !filter.enabled })
+  const toggleFw = (fw: string) => {
+    const allowed = filter.allowed.includes(fw)
+      ? filter.allowed.filter((f) => f !== fw)
+      : [...filter.allowed, fw]
+    void save({ ...filter, allowed })
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">Project frameworks</h2>
+          <p className="text-xs text-muted">
+            Only show projects built with the selected frameworks.
+          </p>
+        </div>
+        <button
+          role="switch"
+          aria-checked={filter.enabled}
+          onClick={toggleEnabled}
+          className={cn(
+            'relative h-5 w-9 rounded-full transition',
+            filter.enabled ? 'bg-accent' : 'bg-zinc-600',
+          )}
+          title={filter.enabled ? 'Filter on' : 'Filter off (all projects shown)'}
+        >
+          <span
+            className={cn(
+              'absolute top-0.5 h-4 w-4 rounded-full bg-white transition',
+              filter.enabled ? 'left-[18px]' : 'left-0.5',
+            )}
+          />
+        </button>
+      </div>
+
+      <div
+        className={cn(
+          'flex flex-wrap gap-1.5 rounded-lg border border-border p-3 transition',
+          !filter.enabled && 'pointer-events-none opacity-40',
+        )}
+      >
+        {all.map((fw) => {
+          const on = filter.allowed.includes(fw)
+          return (
+            <button
+              key={fw}
+              onClick={() => toggleFw(fw)}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-xs transition',
+                on
+                  ? 'border-accent bg-accent/15 text-content'
+                  : 'border-border text-muted hover:text-content',
+              )}
+            >
+              {on && <span className="mr-1 text-accent">✓</span>}
+              {fw}
+            </button>
+          )
+        })}
+      </div>
+      {filter.enabled && filter.allowed.length === 0 && (
+        <p className="text-xs text-warning">No frameworks selected — no projects will show.</p>
+      )}
+    </section>
   )
 }
