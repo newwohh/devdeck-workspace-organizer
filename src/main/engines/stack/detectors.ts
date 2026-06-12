@@ -46,6 +46,13 @@ export const detectors: StackDetector[] = [
         : [],
   },
   {
+    id: 'astro',
+    detect: (c) =>
+      hasDep(c, 'astro') || hasFile(c, 'astro.config.mjs', 'astro.config.ts', 'astro.config.js')
+        ? [hit('frontend', 'Astro', { version: dep(c, 'astro') })]
+        : [],
+  },
+  {
     id: 'react',
     // Lower confidence: Next/Remix already imply React.
     detect: (c) =>

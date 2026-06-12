@@ -1,4 +1,5 @@
 import type { ScanRoot } from '@shared/schemas/project'
+import { isFrameworkAllowed } from '@shared/constants/frameworks'
 import { newId } from '../../db/ids'
 import { projectRepo } from '../../db/project-repo'
 import { analyzeProject } from './analyze'
@@ -44,8 +45,11 @@ export async function rescanRoot(root: ScanRoot, events: IndexEvents): Promise<n
       const candidate = candidates[cursor++]
       try {
         const discovered = await analyzeProject(candidate.path, candidate.markers)
-        projectRepo.upsert(root.id, discovered)
-        keepPaths.push(candidate.path)
+        // Allowlist: only index projects using a permitted framework.
+        if (isFrameworkAllowed(discovered.frameworks)) {
+          projectRepo.upsert(root.id, discovered)
+          keepPaths.push(candidate.path)
+        }
       } catch (err) {
         console.error(`[indexer] failed to analyze ${candidate.path}:`, err)
       }
